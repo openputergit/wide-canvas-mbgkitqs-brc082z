@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selfie & Similar Image Finder</title>
+    <script src="https://unpkg.com/@tensorflow/tfjs"></script>
+    <script src="https://unpkg.com/@tensorflow-models/mobilenet"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        #video {
+            width: 100%;
+            border-radius: 12px;
+        }
+        #canvas {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-blue-100 min-h-screen p-4">
+    <div class="loading" id="loading">
+        <div class="text-center">
+            <i class="bi bi-camera2 animate-spin text-4xl"></i>
+            <p class="mt-2">Processing...</p>
+        </div>
+    </div>
+
+    <!-- Camera View -->
+    <div id="cameraView" class="container mx-auto max-w-2xl">
+        <h1 class="text-3xl font-bold text-center mb-6 text-blue-800">Take Your Selfie</h1>
+        <div class="camera-container mb-4">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+        <div class="flex justify-center gap-4">
+            <button id="captureBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg flex items-center">
+                <i class="bi bi-camera-fill mr-2"></i> Take Selfie
+            </button>
+            <button id="switchCamera" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg flex items-center">
+                <i class="bi bi-arrow-repeat mr-2"></i> Switch Camera
+            </button>
+        </div>
+    </div>
+
+    <!-- Preview View -->
+    <div id="previewView" class="container mx-auto max-w-2xl hidden">
+        <h2 class="text-2xl font-bold text-center mb-6 text-blue-800">Preview Your Selfie</h2>
+        <div class="mb-4">
+            <img id="preview" class="w-full rounded-lg shadow-lg" alt="Preview">
+        </div>
+        <div class="flex justify-center gap-4">
+            <button id="retakeBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg flex items-center">
+                <i class="bi bi-arrow-counterclockwise mr-2"></i> Retake
+            </button>
+            <button id="continueBtn" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg flex items-center">
+                <i class="bi bi-arrow-right mr-2"></i> Continue
+            </button>
+        </div>
+    </div>
+
+    <!-- Similar Images View -->
+    <div id="similarView" class="container mx-auto max-w-4xl hidden">
+        <h2 class="text-2xl font-bold text-center mb-6 text-blue-800">Similar Images</h2>
+        <div id="similarImages" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <!-- Similar images will be populated here -->
+        </div>
+        <div class="mt-6 text-center">
+            <button id="backBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg flex items-center mx-auto">
+                <i class="bi bi-arrow-left mr-2"></i> Take Another Selfie
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let currentStream;
+        let facingMode = "user";
+
+        // DOM Elements
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const preview = document.getElementById('preview');
+        const captureBtn = document.getElementById('captureBtn');
+        const switchCamera = document.getElementById('switchCamera');
+        const retakeBtn = document.getElementById('retakeBtn');
+        const continueBtn = document.getElementById('continueBtn');
+        const backBtn = document.getElementById('backBtn');
+        const loading = document.getElementById('loading');
+        const cameraView = document.getElementById('cameraView');
+        const previewView = document.getElementById('previewView');
+        const similarView = document.getElementById('similarView');
+
+        // Initialize camera
+        async function initCamera() {
+            try {
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                }
+                const constraints = {
+                    video: { facingMode: facingMode }
+                };
+                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = currentStream;
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+                alert('Error accessing camera. Please ensure camera permissions are granted.');
+            }
+        }
+
+        // Switch camera
+        switchCamera.addEventListener('click', () => {
+            facingMode = facingMode === "user" ? "environment" : "user";
+            initCamera();
+        });
+
+        // Capture photo
+        captureBtn.addEventListener('click', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            preview.src = canvas.toDataURL('image/png');
+            cameraView.classList.add('hidden');
+            previewView.classList.remove('hidden');
+        });
+
+        // Retake photo
+        retakeBtn.addEventListener('click', () => {
+            previewView.classList.add('hidden');
+            cameraView.classList.remove('hidden');
+        });
+
+        // Continue to similar images
+        continueBtn.addEventListener('click', async () => {
+            loading.style.display = 'flex';
+            try {
+                // Here we would normally make an API call to get similar images
+                // For demo, we'll use placeholder images
+                const similarImages = [
+                    'https://source.unsplash.com/random/300x300?portrait,1',
+                    'https://source.unsplash.com/random/300x300?portrait,2',
+                    'https://source.unsplash.com/random/300x300?portrait,3',
+                    'https://source.unsplash.com/random/300x300?portrait,4',
+                    'https://source.unsplash.com/random/300x300?portrait,5',
+                    'https://source.unsplash.com/random/300x300?portrait,6'
+                ];
+
+                const similarImagesContainer = document.getElementById('similarImages');
+                similarImagesContainer.innerHTML = '';
+                
+                similarImages.forEach(imgUrl => {
+                    const imgDiv = document.createElement('div');
+                    imgDiv.className = 'aspect-square';
+                    const img = document.createElement('img');
+                    img.src = imgUrl;
+                    img.className = 'w-full h-full object-cover rounded-lg shadow-md';
+                    imgDiv.appendChild(img);
+                    similarImagesContainer.appendChild(imgDiv);
+                });
+
+                previewView.classList.add('hidden');
+                similarView.classList.remove('hidden');
+            } catch (error) {
+                console.error('Error finding similar images:', error);
+                alert('Error finding similar images. Please try again.');
+            } finally {
+                loading.style.display = 'none';
+            }
+        });
+
+        // Back to camera
+        backBtn.addEventListener('click', () => {
+            similarView.classList.add('hidden');
+            cameraView.classList.remove('hidden');
+            initCamera();
+        });
+
+        // Initialize on load
+        window.addEventListener('load', initCamera);
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
